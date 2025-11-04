@@ -227,7 +227,7 @@ class TimezoneConstants {
 
 
 class AppConstants {
-  static const String appName = 'Arva';
+  static const String appName = 'ARVA';
   static const String appVersion = '1.0.0';
 
   static const Duration sessionTimeout = Duration(hours: 24);
@@ -249,7 +249,7 @@ class AppConstants {
   static const String placeholderImageUrl =
       'https://via.placeholder.com/400x300?text=No+Image';
 
-  static const int auctionDurationMinutes = 15;
+  static const int auctionDurationMinutes = 60;
 }
 
 class AppAnimations {

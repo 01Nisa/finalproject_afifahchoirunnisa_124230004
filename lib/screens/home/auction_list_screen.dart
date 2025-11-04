@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../services/auction_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
@@ -28,11 +28,11 @@ class _AuctionListScreenState extends State<AuctionListScreen> {
 
   final List<String> _categories = [
     'Semua',
-    'Renaissance',
-    'Impressionist',
+    'Renaisans',
+    'Impresionis',
     'Modern',
-    'Contemporary',
-    'Classical'
+    'Kontemporer',
+    'Klasik'
   ];
 
   @override
@@ -270,8 +270,9 @@ class _AuctionListScreenState extends State<AuctionListScreen> {
                                                             child,
                                                             loadingProgress) {
                                                           if (loadingProgress ==
-                                                              null)
+                                                              null) {
                                                             return child;
+                                                          }
                                                           return const Center(
                                                             child: SizedBox(
                                                               width: 20,

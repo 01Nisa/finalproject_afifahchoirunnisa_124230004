@@ -96,7 +96,7 @@ class _AuctionActiveScreenState extends State<AuctionActiveScreen>
           final auction = _auctionService.getAuctionById(a.auctionId);
           if (auction == null) return false;
           final now = DateTime.now();
-          final endTime = auction.auctionDate.add(const Duration(minutes: 15));
+          final endTime = auction.auctionDate.add(AppAnimations.auctionDuration);
           return now.isAfter(auction.auctionDate) && now.isBefore(endTime);
         })
         .toList();
@@ -249,7 +249,7 @@ class _AuctionActiveScreenState extends State<AuctionActiveScreen>
     final now = DateTime.now();
     final isOngoing = isActive &&
         now.isAfter(auction.auctionDate) &&
-        now.isBefore(auction.auctionDate.add(const Duration(minutes: 15)));
+        now.isBefore(auction.auctionDate.add(AppAnimations.auctionDuration));
 
     return Card(
       margin:

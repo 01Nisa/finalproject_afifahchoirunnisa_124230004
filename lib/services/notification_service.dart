@@ -49,13 +49,34 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    if (_localNotifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>() !=
-        null) {
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()!
-          .requestNotificationsPermission();
+    // Request permission untuk Android
+    final androidImplementation = _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImplementation != null) {
+      await androidImplementation.requestNotificationsPermission();
+      
+      // Buat notification channel untuk Android
+      const androidChannel = AndroidNotificationChannel(
+        'auction_channel',
+        'Lelang Notifikasi',
+        description: 'Notifikasi untuk lelang aktif dan peringatan',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      );
+      
+      await androidImplementation.createNotificationChannel(androidChannel);
+    }
+
+    // Request permission untuk iOS
+    final iosImplementation = _localNotifications.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (iosImplementation != null) {
+      await iosImplementation.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
     }
 
     _isInitialized = true;
@@ -344,7 +365,8 @@ class NotificationService {
       final startTime = auction.auctionDate;
       final minutesUntilStart = startTime.difference(now).inMinutes;
 
-      if (minutesUntilStart >= 4 && minutesUntilStart <= 6) {
+      // Notifikasi 10 menit sebelum lelang dimulai (range 9-11 menit untuk toleransi)
+      if (minutesUntilStart >= 9 && minutesUntilStart <= 11) {
         await notifyAuctionStarting(
           userId: userId,
           auctionId: auction.id,

@@ -177,12 +177,16 @@ class AuctionService {
       DateTime auctionDate;
       final index = ApiConstants.artworkObjectIds.indexOf(objectId);
       if (index == 0) {
-        auctionDate = DateTime.now().subtract(const Duration(minutes: 12));
+        // Sisa 6 menit (lelang 60 menit - 6 menit = dimulai 54 menit yang lalu)
+        auctionDate = DateTime.now().subtract(const Duration(minutes: 54));
       } else if (index == 1) {
-        auctionDate = DateTime.now().subtract(const Duration(minutes: 10));
+        // Sisa 20 menit (lelang 60 menit - 20 menit = dimulai 40 menit yang lalu)
+        auctionDate = DateTime.now().subtract(const Duration(minutes: 40));
       } else if (index == 2) {
-        auctionDate = DateTime.now().subtract(const Duration(minutes: 5));
+        // Sisa 30 menit (lelang 60 menit - 30 menit = dimulai 30 menit yang lalu)
+        auctionDate = DateTime.now().subtract(const Duration(minutes: 30));
       } else if (index == 3) {
+        // Sisa 1 jam (lelang baru dimulai)
         auctionDate = DateTime.now();
       } else {
         auctionDate = DateTime.now().add(Duration(days: daysAhead, hours: 20));

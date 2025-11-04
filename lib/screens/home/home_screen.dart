@@ -30,18 +30,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isSearchVisible = false;
   final TextEditingController _searchController = TextEditingController();
 
-  // Data state
   List<dynamic> _auctions = [];
   bool _isLoadingAuctions = true;
   bool _hasLoadedOnce = false;
 
   final List<String> _categories = [
     'Semua',
-    'Renaissance',
-    'Impressionist',
+    'Renaisans',
+    'Impresionis',
     'Modern',
-    'Contemporary',
-    'Classical'
+    'Kontemporer',
+    'Klasik'
   ];
 
   dynamic _featuredAuction;
@@ -323,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ],
 
               if (activeAuctions.isNotEmpty) ...[
-                _buildSectionTitle('Lelang Berlangsung', Icons.gavel, color: AppColors.success),
+                const Text('Lelang Berlangsung', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.vintageBrown, fontFamily: 'Poppins')),
                 const SizedBox(height: 12),
                 SizedBox(
                   height: 240,
@@ -442,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   child: Image.network(
                     a.primaryImageUrl,
-                    height: 1,
+                    height: 110,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     loadingBuilder: (c, child, p) => p == null
@@ -507,16 +506,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, IconData icon, {Color? color}) {
-    return Row(
-      children: [
-        Icon(icon, color: color ?? AppColors.vintageGold, size: 24),
-        const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.vintageBrown, fontFamily: 'Poppins')),
-      ],
     );
   }
 

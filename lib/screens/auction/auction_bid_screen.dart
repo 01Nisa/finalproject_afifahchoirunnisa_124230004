@@ -321,7 +321,8 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
 
   Widget _buildBidInputLabel(double currentBid, String currency) {
     final auctionMinBid = _auction?.minimumBid ?? 0.0;
-    final minBid = currentBid > auctionMinBid ? currentBid : auctionMinBid;
+    // Hanya cek terhadap harga dasar, bukan tawaran tertinggi
+    final minBid = auctionMinBid;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -369,8 +370,8 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
     if (text.isEmpty) return null;
     final value = double.tryParse(text);
     if (value == null) return 'Masukkan angka yang valid';
-    if (value < minBid) {
-      return 'Tawaran harus lebih besar dari ${ConversionHelper.formatConvertedCurrency(minBid, currency)}';
+    if (value <= minBid) {
+      return 'Tawaran harus lebih besar dari harga dasar ${ConversionHelper.formatConvertedCurrency(minBid, currency)}';
     }
     return null;
   }
@@ -501,15 +502,16 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
       return;
     }
 
-    if (bidAmount <= currentBid) {
+    // Validasi: tawaran hanya harus lebih besar dari harga dasar, bukan dari tawaran sebelumnya
+    final minimumBid = _auction!.minimumBid;
+    if (bidAmount <= minimumBid) {
       _showSnackBar(
-          'Tawaran harus lebih besar dari ${ConversionHelper.formatConvertedCurrency(currentBid, currency)}',
+          'Tawaran harus lebih besar dari harga dasar ${ConversionHelper.formatConvertedCurrency(minimumBid, currency)}',
           isError: true);
       return;
     }
 
-    // Konfirmasi jika bid > 2x current
-    if (bidAmount > currentBid * 2) {
+    if (bidAmount > minimumBid * 5) {
       final confirm = await _showConfirmDialog(
         'Tawaran Besar',
         'Anda akan menawar ${ConversionHelper.formatConvertedCurrency(bidAmount, currency)}. Lanjutkan?',
