@@ -1,5 +1,7 @@
 ﻿import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
+import '../utils/conversion.dart';
+import '../utils/constants.dart';
 
 part 'auction_model.g.dart';
 
@@ -50,6 +52,15 @@ class AuctionModel extends HiveObject {
   @HiveField(14)
   final String category;
 
+  @HiveField(15)
+  final String? year;
+
+  @HiveField(16)
+  final String? medium;
+
+  @HiveField(17)
+  final String? dimensions;
+
   AuctionModel({
     String? id,
     required this.metObjectId,
@@ -66,6 +77,9 @@ class AuctionModel extends HiveObject {
     int? totalBids,
     required this.isExclusive,
     String? category,
+    this.year,
+    this.medium,
+    this.dimensions,
   })  : id = id ?? const Uuid().v4(),
         currentBid = currentBid ?? minimumBid,
         status = status ?? _determineStatus(auctionDate),
@@ -102,4 +116,7 @@ class AuctionModel extends HiveObject {
 
   String get formattedMinBid => '\$${minimumBid.toStringAsFixed(0)}';
   String get formattedCurrentBid => '\$${currentBid.toStringAsFixed(0)}';
+  
+  String get formattedMinBidLocalized => ConversionHelper.formatCurrency(minimumBid, AppConstants.defaultCurrency);
+  String get formattedCurrentBidLocalized => ConversionHelper.formatCurrency(currentBid, AppConstants.defaultCurrency);
 }

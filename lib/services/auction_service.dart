@@ -4,6 +4,18 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import '../models/auction_model.dart';
 import '../utils/constants.dart';
+import '../utils/conversion.dart';
+
+// Public helper: extract the first 4-digit year from API objectDate strings.
+String? extractYearFromObjectDate(String? raw) {
+  if (raw == null) return null;
+  final m = RegExp(r"\b(\d{4})\b").firstMatch(raw);
+  if (m != null) {
+    final y = int.tryParse(m.group(1)!);
+    if (y != null && y >= 1000 && y <= 2100) return y.toString();
+  }
+  return null;
+}
 
 class AuctionService {
   static final AuctionService _instance = AuctionService._internal();
@@ -26,6 +38,44 @@ class AuctionService {
 
   Future<List<AuctionModel>> fetchAuctions({bool forceRefresh = false}) async {
     if (!forceRefresh && _cache.isNotEmpty && _isCacheValid) {
+      // Ensure any in-memory cached auctions are migrated if they look like
+      // old USD-based small values. This covers the case where the app
+      // loaded older small values into memory earlier in the session.
+      await _ensureBox();
+      bool changed = false;
+      for (int i = 0; i < _cache.length; i++) {
+        final a = _cache[i];
+        if (a.minimumBid < 10000) {
+          final newMin = ConversionHelper.convertCurrency(a.minimumBid, 'IDR', fromCurrency: 'USD');
+          final newCurrent = ConversionHelper.convertCurrency(a.currentBid, 'IDR', fromCurrency: 'USD');
+          final migratedA = AuctionModel(
+            id: a.id,
+            metObjectId: a.metObjectId,
+            title: a.title,
+            artist: a.artist,
+            primaryImageUrl: a.primaryImageUrl,
+            minimumBid: newMin,
+            currentBid: newCurrent,
+            location: a.location,
+            year: a.year,
+            medium: a.medium,
+            dimensions: a.dimensions,
+            latitude: a.latitude,
+            longitude: a.longitude,
+            auctionDate: a.auctionDate,
+            status: a.status,
+            totalBids: a.totalBids,
+            isExclusive: a.isExclusive,
+            category: a.category,
+          );
+          _cache[i] = migratedA;
+          try {
+            await _box!.put(migratedA.id, migratedA);
+          } catch (_) {}
+          changed = true;
+        }
+      }
+      if (changed) print('Migrated ${_cache.length} cached auctions to IDR');
       print('Using memory cached auctions: ${_cache.length} items');
       return _cache;
     }
@@ -34,9 +84,44 @@ class AuctionService {
 
     if (!forceRefresh && _box!.isNotEmpty) {
       final cachedAuctions = _box!.values.toList();
+      final migrated = <AuctionModel>[];
+      // If cached auctions were created with old small numeric values (e.g. USD-like
+      // amounts), migrate them to IDR by converting from USD->IDR when the
+      // stored minimumBid looks unreasonably small.
+      for (final a in cachedAuctions) {
+        if (a.minimumBid < 10000) {
+          final newMin = ConversionHelper.convertCurrency(a.minimumBid, 'IDR', fromCurrency: 'USD');
+          final newCurrent = ConversionHelper.convertCurrency(a.currentBid, 'IDR', fromCurrency: 'USD');
+          final migratedA = AuctionModel(
+            id: a.id,
+            metObjectId: a.metObjectId,
+            title: a.title,
+            artist: a.artist,
+            primaryImageUrl: a.primaryImageUrl,
+            minimumBid: newMin,
+            currentBid: newCurrent,
+            location: a.location,
+            year: a.year,
+            medium: a.medium,
+            dimensions: a.dimensions,
+            latitude: a.latitude,
+            longitude: a.longitude,
+            auctionDate: a.auctionDate,
+            status: a.status,
+            totalBids: a.totalBids,
+            isExclusive: a.isExclusive,
+            category: a.category,
+          );
+          await _box!.put(migratedA.id, migratedA);
+          migrated.add(migratedA);
+        } else {
+          migrated.add(a);
+        }
+      }
+
       _cache
         ..clear()
-        ..addAll(cachedAuctions);
+        ..addAll(migrated);
       print('Loaded ${_cache.length} auctions from local storage (Hive)');
 
       return _cache;
@@ -109,8 +194,36 @@ class AuctionService {
     if (isExclusive != null) {
       list = list.where((a) => a.isExclusive == isExclusive);
     }
+    // Normalize category matching to be case-insensitive and support
+    // older/English category names stored in cache. Also treat 'Semua'
+    // as no-op.
     if (category != null && category != 'Semua') {
-      list = list.where((a) => a.category == category);
+      // Stronger canonicalization map to handle English/Indonesian variants
+      String canonical(String? s) {
+        if (s == null) return '';
+        final x = s.trim().toLowerCase();
+        const map = {
+          'renaissance': 'renaisans',
+          'renaissances': 'renaisans',
+          'renaisans': 'renaisans',
+          'impressionist': 'impresionis',
+          'impressionists': 'impresionis',
+          'impressionism': 'impresionis',
+          'impresionis': 'impresionis',
+          'modern': 'modern',
+          'kontemporer': 'kontemporer',
+          'contemporary': 'kontemporer',
+          'classical': 'klasik',
+          'klasik': 'klasik',
+        };
+        return map[x] ?? x;
+      }
+
+      final wanted = canonical(category);
+      list = list.where((a) {
+        final ak = canonical(a.category);
+        return ak == wanted || ak.contains(wanted) || wanted.contains(ak);
+      });
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final q = searchQuery.toLowerCase();
@@ -150,8 +263,14 @@ class AuctionService {
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
 
-      final title = (data['title'] as String?)?.trim();
-      final artist = (data['artistDisplayName'] as String?)?.trim();
+  final title = (data['title'] as String?)?.trim();
+  final artist = (data['artistDisplayName'] as String?)?.trim();
+  final objectDate = (data['objectDate'] as String?)?.trim();
+  final medium = (data['medium'] as String?)?.trim();
+  final dimensions = (data['dimensions'] as String?)?.trim();
+
+  // Only keep a clean 4-digit year; if none found, leave null so UI hides the field.
+  final yearOnly = extractYearFromObjectDate(objectDate);
 
       if (title == null || title.isEmpty) {
         print('Object $objectId has no title, skipping...');
@@ -170,7 +289,14 @@ class AuctionService {
 
       print('Successfully fetched: $title by ${artist ?? "Unknown Artist"}');
 
-      final minBid = 1000.0 + (objectId % 10) * 500;
+  // Generate minimum bid in IDR (app default). The user requested
+  // 'juta' (millions), not 'miliar'. Use a base in millions with
+  // some variance and jitter for variety.
+  // Base: 1,000,000 IDR (1 juta) + variance depending on id.
+  final base = 1000000.0; // 1 juta IDR
+  final variance = (objectId % 20) * 250000.0; // up to +4.75 juta
+  final jitter = (objectId % 7) * 50000.0; // small per-item jitter
+  final minBid = base + variance + jitter;
       final exclusive = objectId % 2 == 0;
       final daysAhead = 3 + (objectId % 7);
 
@@ -201,6 +327,9 @@ class AuctionService {
         artist: artist ?? 'Unknown Artist',
         primaryImageUrl: image,
         minimumBid: minBid,
+  year: yearOnly,
+        medium: medium,
+        dimensions: dimensions,
         location: location,
         auctionDate: auctionDate,
         isExclusive: exclusive,
@@ -227,12 +356,13 @@ class AuctionService {
   }
 
   String _getCategory(int seed) {
+    // Return category names in Indonesian to match UI filter chips.
     const categories = [
-      'Renaissance',
-      'Impressionist',
+      'Renaisans',
+      'Impresionis',
       'Modern',
-      'Contemporary',
-      'Classical',
+      'Kontemporer',
+      'Klasik',
     ];
     return categories[seed % categories.length];
   }

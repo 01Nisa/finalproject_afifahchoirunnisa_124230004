@@ -41,6 +41,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Location usage description for OpenStreetMap LBS -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>App membutuhkan akses lokasi untuk menampilkan jarak ke lokasi lukisan.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

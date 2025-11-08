@@ -1,4 +1,5 @@
 ﻿import 'package:hive/hive.dart';
+import '../utils/constants.dart';
 
 part 'user_model.g.dart';
 
@@ -44,8 +45,8 @@ class UserModel extends HiveObject {
     required this.name,
     this.phone,
     this.profileImageUrl,
-    this.defaultCurrency = 'USD',
-    this.defaultTimezone = 'UTC',
+  this.defaultCurrency = AppConstants.defaultCurrency,
+  this.defaultTimezone = AppConstants.defaultTimezone,
     required this.createdAt,
     this.updatedAt,
     this.notificationsEnabled = true,
@@ -103,8 +104,8 @@ class UserModel extends HiveObject {
       name: json['name'] as String,
       phone: json['phone'] as String?,
       profileImageUrl: json['profileImageUrl'] as String?,
-      defaultCurrency: json['defaultCurrency'] as String? ?? 'USD',
-      defaultTimezone: json['defaultTimezone'] as String? ?? 'UTC',
+  defaultCurrency: json['defaultCurrency'] as String? ?? AppConstants.defaultCurrency,
+  defaultTimezone: json['defaultTimezone'] as String? ?? AppConstants.defaultTimezone,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)

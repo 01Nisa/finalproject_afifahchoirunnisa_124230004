@@ -97,22 +97,33 @@ class AuthService {
     required String password,
   }) async {
     try {
-      UserModel? user;
-      try {
-        user = _usersBox.values.firstWhere(
-          (u) => u.email.toLowerCase() == email.toLowerCase(),
-        );
-      } catch (e) {
+      // basic email format validation (reuse app validator logic)
+      final emailError = AppValidators.email(email);
+      if (emailError != null) {
         return {
           'success': false,
-          'message': 'Email atau password salah',
+          'message': 'Format email tidak valid',
         };
       }
 
+      // find user by email
+      final matches = _usersBox.values
+          .where((u) => u.email.toLowerCase() == email.toLowerCase());
+
+      if (matches.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Email belum terdaftar',
+        };
+      }
+
+      final user = matches.first;
+
+      // verify password
       if (!_verifyPassword(password, user.passwordHash)) {
         return {
           'success': false,
-          'message': 'Email atau password salah',
+          'message': 'Password salah',
         };
       }
 

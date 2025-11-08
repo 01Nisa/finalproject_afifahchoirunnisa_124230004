@@ -564,9 +564,7 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
     if (confirmed && mounted) {
       await _userService.unregisterAuction(widget.interestId);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pendaftaran lelang dibatalkan')),
-      );
+      
     }
   }
 

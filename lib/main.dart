@@ -8,6 +8,7 @@ import 'models/auction_model.dart';
 import 'models/interest_model.dart';
 import 'models/feedback_model.dart';
 import 'models/tawaran_model.dart';
+import 'models/notification_model.dart';
 
 import 'services/auth_service.dart';
 import 'services/user_service.dart';
@@ -34,12 +35,18 @@ void main() async {
   Hive.registerAdapter(InterestModelAdapter());
   Hive.registerAdapter(FeedbackModelAdapter());
   Hive.registerAdapter(TawaranModelAdapter());
+  Hive.registerAdapter(NotificationModelAdapter());
 
   await AuthService().initialize();
   await UserService().initialize();
   await LocalDbService().initialize();
   await BidService().initialize();
   await NotificationService().initialize();
+
+  // WorkManager-based periodic background checks were removed because the
+  // selected `workmanager` plugin produced Android/Kotlin compile errors in
+  // this project's environment. Background checks will be implemented via a
+  // different approach (FCM or a compatible background plugin) in a follow-up.
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

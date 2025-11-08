@@ -2,39 +2,50 @@ import 'package:intl/intl.dart';
 import 'constants.dart';
 
 class ConversionHelper {
+  /// Convert [amount] from [fromCurrency] (defaults to app default) to [targetCurrency].
+  ///
+  /// Exchange rates are stored in [CurrencyConstants.exchangeRates] as the
+  /// number of units of that currency per 1 USD (e.g. IDR: 15750 means
+  /// 1 USD = 15750 IDR). The conversion formula is:
+  /// amount_in_usd = amount / rate[from]
+  /// amount_in_target = amount_in_usd * rate[target]
   static double convertCurrency(
-    double amountUSD,
-    String targetCurrency,
-  ) {
-    if (targetCurrency == 'USD') return amountUSD;
+    double amount,
+    String targetCurrency, {
+    String fromCurrency = AppConstants.defaultCurrency,
+  }) {
+    if (fromCurrency == targetCurrency) return amount;
 
-    final rate = CurrencyConstants.exchangeRates[targetCurrency];
-    if (rate == null) return amountUSD;
+    final rateFrom = CurrencyConstants.exchangeRates[fromCurrency] ?? 1.0;
+    final rateTo = CurrencyConstants.exchangeRates[targetCurrency] ?? 1.0;
 
-    return amountUSD * rate;
+    // Convert from source currency to USD, then to target currency
+    final amountUsd = amount / rateFrom;
+    return amountUsd * rateTo;
   }
 
   static String formatCurrency(
     double amount,
-    String currency, {
+    String? currency, {
     bool showSymbol = true,
     int decimalPlaces = 0,
   }) {
-    final symbol = CurrencyConstants.currencySymbols[currency] ?? '\$';
+    final cur = _normalizeCurrency(currency);
+    final symbol = CurrencyConstants.currencySymbols[cur] ?? '\$';
 
     String formattedAmount;
 
-    if (currency == 'IDR' || currency == 'JPY') {
+    if (cur == 'IDR' || cur == 'JPY') {
       formattedAmount = NumberFormat.currency(
         symbol: showSymbol ? symbol : '',
         decimalDigits: 0,
-        locale: _getCurrencyLocale(currency),
+        locale: _getCurrencyLocale(cur),
       ).format(amount);
     } else {
       formattedAmount = NumberFormat.currency(
         symbol: showSymbol ? symbol : '',
         decimalDigits: decimalPlaces,
-        locale: _getCurrencyLocale(currency),
+        locale: _getCurrencyLocale(cur),
       ).format(amount);
     }
 
@@ -42,15 +53,16 @@ class ConversionHelper {
   }
 
   static String formatConvertedCurrency(
-    double amountUSD,
-    String targetCurrency, {
+    double amount,
+    String? targetCurrency, {
     bool showSymbol = true,
     int decimalPlaces = 0,
   }) {
-    final converted = convertCurrency(amountUSD, targetCurrency);
+    final tgt = _normalizeCurrency(targetCurrency);
+    final converted = convertCurrency(amount, tgt);
     return formatCurrency(
       converted,
-      targetCurrency,
+      tgt,
       showSymbol: showSymbol,
       decimalPlaces: decimalPlaces,
     );
@@ -77,41 +89,62 @@ class ConversionHelper {
     }
   }
 
+    static String _normalizeCurrency(String? currency) {
+      if (currency == null) return AppConstants.defaultCurrency;
+      final t = currency.trim();
+      return t.isEmpty ? AppConstants.defaultCurrency : t;
+    }
+
+    static String _normalizeTimezone(String? timezone) {
+      if (timezone == null) return AppConstants.defaultTimezone;
+      final t = timezone.trim();
+      return t.isEmpty ? AppConstants.defaultTimezone : t;
+    }
+
   static String formatCompactCurrency(
-    double amountUSD,
-    String targetCurrency,
+    double amount,
+    String? targetCurrency,
   ) {
-    final converted = convertCurrency(amountUSD, targetCurrency);
-    final symbol = CurrencyConstants.currencySymbols[targetCurrency] ?? '\$';
+    final tgt = _normalizeCurrency(targetCurrency);
+    final converted = convertCurrency(amount, tgt);
+    final symbol = CurrencyConstants.currencySymbols[tgt] ?? '\$';
 
     if (converted >= 1000000) {
       return '$symbol${(converted / 1000000).toStringAsFixed(1)}M';
     } else if (converted >= 1000) {
       return '$symbol${(converted / 1000).toStringAsFixed(0)}K';
     } else {
-      return formatCurrency(converted, targetCurrency, decimalPlaces: 0);
+      return formatCurrency(converted, tgt, decimalPlaces: 0);
     }
   }
 
+  /// Convert [dateTime] which is assumed to be in the app default timezone
+  /// (see [AppConstants.defaultTimezone]) into [targetTimezone]. This computes
+  /// the UTC instant from the source offset then applies the target offset.
   static DateTime convertTimezone(
     DateTime dateTime,
     String targetTimezone,
   ) {
-    final offset = TimezoneConstants.timezoneOffsets[targetTimezone];
-    if (offset == null) return dateTime;
+    final sourceTz = AppConstants.defaultTimezone;
+    final srcOffset = TimezoneConstants.timezoneOffsets[sourceTz];
+    final tgt = _normalizeTimezone(targetTimezone);
+    final tgtOffset = TimezoneConstants.timezoneOffsets[tgt];
+    if (srcOffset == null || tgtOffset == null) return dateTime;
 
-    final utcTime = dateTime.toUtc();
-
-    return utcTime.add(Duration(hours: offset));
+    // Interpret the provided dateTime as local in source timezone, convert
+    // to UTC, then apply target offset.
+    final utc = dateTime.subtract(Duration(hours: srcOffset));
+    return utc.add(Duration(hours: tgtOffset));
   }
 
   static String formatDateTime(
     DateTime dateTime,
-    String timezone, {
+    String? timezone, {
     bool showTime = true,
     bool showTimezone = true,
   }) {
-    final converted = convertTimezone(dateTime, timezone);
+    final tz = _normalizeTimezone(timezone);
+    final converted = convertTimezone(dateTime, tz);
 
     String pattern;
     if (showTime) {
@@ -123,7 +156,7 @@ class ConversionHelper {
     final formatted = DateFormat(pattern).format(converted);
 
     if (showTimezone) {
-      return '$formatted $timezone';
+      return '$formatted $tz';
     } else {
       return formatted;
     }
@@ -131,10 +164,11 @@ class ConversionHelper {
 
   static String formatDateTimeIndonesian(
     DateTime dateTime,
-    String timezone, {
+    String? timezone, {
     bool showTime = true,
   }) {
-    final converted = convertTimezone(dateTime, timezone);
+    final tz = _normalizeTimezone(timezone);
+    final converted = convertTimezone(dateTime, tz);
 
     final monthsIndo = [
       '',
@@ -159,7 +193,7 @@ class ConversionHelper {
     if (showTime) {
       final hour = converted.hour.toString().padLeft(2, '0');
       final minute = converted.minute.toString().padLeft(2, '0');
-      return '$day $month $year, $hour:$minute $timezone';
+      return '$day $month $year, $hour:$minute $tz';
     } else {
       return '$day $month $year';
     }
@@ -213,11 +247,12 @@ class ConversionHelper {
   }
 
   static String getTimezoneDisplayName(String timezone) {
-    final offset = TimezoneConstants.timezoneOffsets[timezone];
-    if (offset == null) return timezone;
+    final tz = _normalizeTimezone(timezone);
+    final offset = TimezoneConstants.timezoneOffsets[tz];
+    if (offset == null) return tz;
 
     final sign = offset >= 0 ? '+' : '';
-    return '$timezone (UTC$sign$offset)';
+    return '$tz (UTC$sign$offset)';
   }
 
   static bool isValidCurrency(String currency) {

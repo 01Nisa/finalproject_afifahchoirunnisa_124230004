@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
@@ -49,8 +49,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeNotifications();
-    _loadAuctionsData();
+    // Ensure notifications are initialized before loading auctions so
+    // finished-auction notifications can be persisted and emitted reliably.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _initializeNotifications();
+      await _loadAuctionsData();
+    });
   }
 
   @override
@@ -62,8 +66,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && !_hasLoadedOnce) {
-      _loadAuctionsData();
+    if (state == AppLifecycleState.resumed) {
+      // When app resumes, always check for finished auctions so users
+      // receive result notifications even if the data was already loaded.
+      if (!_hasLoadedOnce) {
+        _loadAuctionsData();
+      } else {
+        // kick off checks without awaiting so we don't block the UI thread
+        Future(() async {
+          try {
+            await _checkActiveAuctions();
+            await _showInAppNotificationsIfNeeded();
+          } catch (_) {
+            // swallow - we'll try again later
+          }
+        });
+      }
     }
   }
 
@@ -105,18 +123,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (activeAuctions.isNotEmpty && mounted) {
       final firstActive = activeAuctions.first;
-      await NotificationService.showInAppNotification(
-        context,
-        title: 'Lelang Aktif!',
-        message: '${firstActive.title} sedang berlangsung!',
-        actionText: 'Lihat Sekarang',
-        onAction: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AuctionDetailScreen(auction: firstActive)),
-          );
-        },
-      );
+      // Prefer persisting & recording the popup so the notification service
+      // can avoid showing a duplicate snackbar for the same auction.
+      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        await NotificationService().addNotification(
+          userId: user.id,
+          title: 'Lelang Aktif!',
+          message: '${firstActive.title} sedang berlangsung!',
+          type: 'auction_active',
+          auctionId: firstActive.id,
+          context: context,
+          showPopup: true,
+        );
+      } else {
+        // No user available — show popup without persisting
+        await NotificationService.showInAppNotification(
+          context,
+          title: 'Lelang Aktif!',
+          message: '${firstActive.title} sedang berlangsung!',
+          actionText: 'Lihat Sekarang',
+          onAction: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AuctionDetailScreen(auction: firstActive)),
+            );
+          },
+        );
+      }
     }
   }
 
@@ -127,9 +161,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (user == null) return;
     
     final registeredAuctions = _userService.getRegisteredAuctions(user.id);
+  if (!mounted) return;
+  final now = DateTime.now();
 
-    final now = DateTime.now();
-    
+    // Check for finished auctions first so users get immediate results
+    // (system notification + persisted record) when the app loads/resumes.
+    await _notificationService.checkFinishedAuctionsForUser(
+      userId: user.id,
+      registeredAuctions: registeredAuctions,
+      allAuctions: _auctions.cast<AuctionModel>(),
+      context: context,
+    );
+
     await _notificationService.checkUpcomingAuctions(
       userId: user.id,
       registeredAuctions: registeredAuctions,
@@ -589,9 +632,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onTap: () => _goDetail(a),
         child: SizedBox(
           height: 100,
-          child: Row(
-            children: [
-              ClipRRect(
+      child: Row(
+        children: [
+        ClipRRect(
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppRadius.md),
                   bottomLeft: Radius.circular(AppRadius.md),
@@ -603,6 +646,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: a.primaryImageUrl.isNotEmpty
                       ? Image.network(
                           a.primaryImageUrl,
+
+
                           width: 100,
                           height: 100,
                           fit: BoxFit.cover,
@@ -667,7 +712,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(color: AppColors.vintageGold.withOpacity(0.9), borderRadius: BorderRadius.circular(6)),
                             child: Text(
-                              a.category,
+                              _localizeCategory(a.category),
                               style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -682,6 +727,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+
+  String _localizeCategory(String? category) {
+    if (category == null) return '';
+    final x = category.trim().toLowerCase();
+    switch (x) {
+      case 'renaissance':
+      case 'renaissances':
+      case 'renaisans':
+        return 'Renaisans';
+      case 'impressionist':
+      case 'impressionists':
+      case 'impressionism':
+      case 'impresionis':
+        return 'Impresionis';
+      case 'contemporary':
+      case 'kontemporer':
+        return 'Kontemporer';
+      case 'classical':
+      case 'klasik':
+        return 'Klasik';
+      case 'modern':
+        return 'Modern';
+      default:
+        return category[0].toUpperCase() + category.substring(1);
+    }
   }
 
   void _goDetail(dynamic a) => Navigator.push(context, MaterialPageRoute(builder: (_) => AuctionDetailScreen(auction: a)));

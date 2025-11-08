@@ -5,6 +5,7 @@ import '../models/interest_model.dart';
 import '../models/feedback_model.dart';
 import '../models/auction_model.dart';
 import '../utils/constants.dart';
+import 'notification_service.dart';
 
 class UserService {
   static final UserService _instance = UserService._internal();
@@ -24,6 +25,27 @@ class UserService {
 
     try {
       _usersBox = await Hive.openBox<UserModel>(AppConstants.usersBox);
+      // Migration: ensure existing users have app defaults for currency/timezone
+      try {
+        for (var user in _usersBox.values.toList()) {
+          var changed = false;
+          if (user.defaultCurrency.isEmpty || user.defaultCurrency == 'USD') {
+            user.defaultCurrency = AppConstants.defaultCurrency;
+            changed = true;
+          }
+          if (user.defaultTimezone.isEmpty || user.defaultTimezone == 'UTC') {
+            user.defaultTimezone = AppConstants.defaultTimezone;
+            changed = true;
+          }
+          if (changed) {
+            await _usersBox.put(user.id, user);
+            print('🔁 Migrated user ${user.id} defaults to ${AppConstants.defaultCurrency}/${AppConstants.defaultTimezone}');
+          }
+        }
+      } catch (e) {
+        // Non-fatal migration errors shouldn't block initialization
+        print('⚠️ UserService: migration failed: $e');
+      }
       _registeredAuctionsBox =
           await Hive.openBox<InterestModel>(AppConstants.registeredAuctionsBox);
       _feedbackBox =
@@ -149,9 +171,22 @@ class UserService {
 
       await _registeredAuctionsBox.put(interestId, newInterest);
 
+      // Persist a registration notification and show a local popup so the
+      // user sees immediate confirmation and the notification is saved
+      // in the bell icon list.
+      try {
+        await NotificationService().addNotification(
+          userId: userId,
+          title: 'Berhasil Mendaftar Lelang',
+          message: 'Anda berhasil mendaftar untuk lelang "${auction.title}"',
+          type: 'registration',
+          auctionId: auction.id,
+        );
+      } catch (_) {}
+
       return {
         'success': true,
-        'message': 'Lelang berhasil didaftarkan',
+        'message': 'Berhasil mendaftar untuk lelang',
         'interest': newInterest,
       };
     } catch (e) {
@@ -176,9 +211,21 @@ class UserService {
 
       await _registeredAuctionsBox.delete(interestId);
 
+      // Persist a cancellation notification so the user sees confirmation
+      // and it is saved in the notifications list.
+      try {
+        await NotificationService().addNotification(
+          userId: interest.userId,
+          title: 'Pembatalan Pendaftaran Lelang',
+          message: 'Pendaftaran Anda untuk lelang "${interest.auctionTitle}" telah dibatalkan.',
+          type: 'cancellation',
+          auctionId: interest.auctionId,
+        );
+      } catch (_) {}
+
       return {
         'success': true,
-        'message': 'Lelang berhasil dibatalkan',
+        'message': 'Pendaftaran berhasil dibatalkan',
       };
     } catch (e) {
       print('❌ Error in unregisterAuction: $e');

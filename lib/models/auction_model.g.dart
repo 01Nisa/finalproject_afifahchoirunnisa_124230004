@@ -1,4 +1,10 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
 part of 'auction_model.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
 
 class AuctionModelAdapter extends TypeAdapter<AuctionModel> {
   @override
@@ -26,13 +32,16 @@ class AuctionModelAdapter extends TypeAdapter<AuctionModel> {
       totalBids: fields[12] as int?,
       isExclusive: fields[13] as bool,
       category: fields[14] as String?,
+      year: fields[15] as String?,
+      medium: fields[16] as String?,
+      dimensions: fields[17] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AuctionModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +71,13 @@ class AuctionModelAdapter extends TypeAdapter<AuctionModel> {
       ..writeByte(13)
       ..write(obj.isExclusive)
       ..writeByte(14)
-      ..write(obj.category);
+      ..write(obj.category)
+      ..writeByte(15)
+      ..write(obj.year)
+      ..writeByte(16)
+      ..write(obj.medium)
+      ..writeByte(17)
+      ..write(obj.dimensions);
   }
 
   @override

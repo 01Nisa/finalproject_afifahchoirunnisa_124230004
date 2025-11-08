@@ -148,6 +148,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     hintText: 'Masukkan nomor telepon Anda',
                     prefixIcon: Icon(Icons.phone_outlined),
                   ),
+                  validator: AppValidators.phone,
+                  onChanged: (v) {
+                    // allow validator to re-run and clear any previous errors
+                    if (_formKey.currentState != null) {
+                      _formKey.currentState!.validate();
+                    }
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(

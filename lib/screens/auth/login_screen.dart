@@ -14,6 +14,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _emailError;
+  String? _passwordError;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -37,17 +39,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = false);
 
+    // Clear previous field errors
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+
     if (!mounted) return;
 
     if (result['success']) {
       Navigator.of(context).pushReplacementNamed('/home');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      final msg = (result['message'] ?? '').toString();
+
+      // map server errors to field errors when possible
+      if (msg.contains('Email belum terdaftar') ||
+          msg.contains('Format email')) {
+        setState(() => _emailError = msg);
+      } else if (msg.contains('Password salah')) {
+        setState(() => _passwordError = msg);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -87,8 +105,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Email',
                     hintText: 'Masukkan email Anda',
                     prefixIcon: Icon(Icons.email_outlined),
-                  ),
+                    // errorText will be provided dynamically
+                  ).copyWith(errorText: _emailError),
                   validator: AppValidators.email,
+                  onChanged: (v) {
+                    if (_emailError != null) setState(() => _emailError = null);
+                  },
                 ),
 
                 const SizedBox(height: AppSpacing.md),
@@ -110,8 +132,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
-                  ),
+                    // show password related errors from server
+                  ).copyWith(errorText: _passwordError),
                   validator: AppValidators.password,
+                  onChanged: (v) {
+                    if (_passwordError != null) setState(() => _passwordError = null);
+                  },
                 ),
 
                 const SizedBox(height: AppSpacing.lg),

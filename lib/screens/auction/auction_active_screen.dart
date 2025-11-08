@@ -242,9 +242,9 @@ class _AuctionActiveScreenState extends State<AuctionActiveScreen>
     final auction = _auctionService.getAuctionById(interest.auctionId);
     if (auction == null) return const SizedBox.shrink();
 
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    final currency = user?.defaultCurrency ?? 'USD';
-    final timezone = user?.defaultTimezone ?? 'UTC';
+  final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+  final currency = user?.defaultCurrency ?? AppConstants.defaultCurrency;
+  final timezone = user?.defaultTimezone ?? AppConstants.defaultTimezone;
 
     final now = DateTime.now();
     final isOngoing = isActive &&
