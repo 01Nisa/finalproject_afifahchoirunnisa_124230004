@@ -24,7 +24,6 @@ dependencies:
   # HTTP & API
   http: ^1.1.0
   dio: ^5.4.0
-  # supabase_flutter removed (local-only Hive storage)
   
   # Maps & Location
   geolocator: ^14.0.2
@@ -46,7 +45,6 @@ dependencies:
   flutter_local_notifications: ^19.5.0
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
-  # workmanager removed temporarily due to Android/Kotlin build incompatibility
   
   # Image Picker
   image_picker: ^1.0.7
@@ -77,3 +75,8 @@ flutter:
           weight: 600
         - asset: fonts/Poppins-Bold.ttf
           weight: 700
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.jpg"

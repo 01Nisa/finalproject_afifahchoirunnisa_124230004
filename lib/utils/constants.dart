@@ -239,9 +239,6 @@ class AppConstants {
   static const String bidsBox = 'bids_box';
 
   static const int itemsPerPage = 10;
-
-
-  // Change defaults to Indonesian settings
   static const String defaultCurrency = 'IDR';
   static const String defaultTimezone = 'WIB';
   static const String defaultLanguage = 'id';
@@ -301,22 +298,18 @@ class AppValidators {
   }
 
   static String? phone(String? value) {
-    // phone is optional in some forms; allow empty
     if (value == null || value.trim().isEmpty) return null;
 
-    // disallow letters
     final hasLetters = RegExp(r'[A-Za-z]').hasMatch(value);
     if (hasLetters) {
       return 'Nomor telepon tidak boleh mengandung huruf';
     }
 
-    // count digits only and require minimum 12 digits
     final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
     if (digitsOnly.length < 12) {
       return 'Nomor telepon minimal 12 digit';
     }
 
-    // basic allowed characters check (digits, +, -, spaces, parentheses)
     final phoneRegex = RegExp(r'^[0-9+\-\s()]+$');
     if (!phoneRegex.hasMatch(value)) {
       return 'Format nomor telepon tidak valid';

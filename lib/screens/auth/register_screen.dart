@@ -150,7 +150,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: AppValidators.phone,
                   onChanged: (v) {
-                    // allow validator to re-run and clear any previous errors
                     if (_formKey.currentState != null) {
                       _formKey.currentState!.validate();
                     }

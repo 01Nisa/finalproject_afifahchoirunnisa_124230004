@@ -22,12 +22,9 @@ class NotificationService {
   Box<NotificationModel>? _notificationsBox;
 
   final Set<String> _notifiedAuctions = {};
-
-  // Tracks auction IDs that were displayed as in-app popups during this
-  // session so we don't also show a snackbar for the same event.
-  final Set<String> _popupShownAuctions = {};
-  // Whether an in-app popup is currently visible. Used to prevent showing
-  // snackbars while a popup is shown.
+  final Map<String, DateTime> _lastPopupShown = {};
+  final Set<String> _dismissedPopups = {};
+  static const Duration _popupCooldown = Duration(minutes: 30);
   bool _isPopupVisible = false;
 
   Future<void> initialize() async {
@@ -35,8 +32,6 @@ class NotificationService {
 
     _notificationsBox =
         await Hive.openBox<NotificationModel>('notifications_box');
-
-    // nothing extra to init here for now
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -56,14 +51,10 @@ class NotificationService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
-
-    // Request permission untuk Android
     final androidImplementation = _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidImplementation != null) {
       await androidImplementation.requestNotificationsPermission();
-      
-      // Buat notification channel untuk Android
       const androidChannel = AndroidNotificationChannel(
         'auction_channel',
         'Lelang Notifikasi',
@@ -75,8 +66,6 @@ class NotificationService {
       
       await androidImplementation.createNotificationChannel(androidChannel);
     }
-
-    // Request permission untuk iOS
     final iosImplementation = _localNotifications.resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>();
     if (iosImplementation != null) {
@@ -91,10 +80,6 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    // Currently we don't perform direct navigation from the notification
-    // service to UI screens. The app listens for lifecycle events and
-    // reads persisted notifications to decide navigation. Keeping this
-    // method minimal avoids bringing UI/navigation code into the service.
     return;
   }
 
@@ -105,8 +90,6 @@ class NotificationService {
     Duration duration = const Duration(seconds: 3),
     IconData? icon,
   }) {
-    // If an in-app popup is visible, avoid showing snackbars so the UI
-    // doesn't show duplicate messages (popup above + snackbar below).
     if (NotificationService()._isPopupVisible) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -171,10 +154,6 @@ class NotificationService {
     );
   }
 
-  // Scheduling via timezone-aware zonedSchedule is not used here to keep
-  // behavior simple and reliable across platforms in the current setup.
-  // We still display immediate local notifications and persist records.
-
   static Future<void> showInAppNotification(
     BuildContext context, {
     required String title,
@@ -185,10 +164,20 @@ class NotificationService {
     String? auctionId,
   }) {
     final instance = NotificationService();
-    // If caller provides an auctionId, record that this auction was shown
-    // as a popup so the service can avoid duplicate snackbars later.
-    if (auctionId != null) instance._popupShownAuctions.add(auctionId);
-    // Mark popup visible while dialog is up so snackbars are suppressed.
+    // If this auction was explicitly dismissed by the user, don't show again
+    if (auctionId != null && instance._dismissedPopups.contains(auctionId)) {
+      return Future.value();
+    }
+
+    // Rate-limit popups per-auction to avoid spamming the user
+    if (auctionId != null) {
+      final last = instance._lastPopupShown[auctionId];
+      if (last != null && DateTime.now().difference(last) < _popupCooldown) {
+        return Future.value();
+      }
+      instance._lastPopupShown[auctionId] = DateTime.now();
+    }
+
     instance._isPopupVisible = true;
     return showDialog(
       context: context,
@@ -223,7 +212,11 @@ class NotificationService {
         actions: [
           if (isDismissible)
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                // If user actively closes the popup, mark it dismissed so it won't show again
+                if (auctionId != null) instance._dismissedPopups.add(auctionId);
+                Navigator.of(context).pop();
+              },
               child: const Text(
                 'Tutup',
                 style: TextStyle(color: AppColors.textSecondary),
@@ -249,11 +242,16 @@ class NotificationService {
     });
   }
 
-  /// Register that an auction popup was shown. Public helper for callers
-  /// that display a popup through other means and want the notification
-  /// service to avoid duplicate snackbars for the same auction.
   static void registerPopupShown(String auctionId) {
-    NotificationService()._popupShownAuctions.add(auctionId);
+    NotificationService()._lastPopupShown[auctionId] = DateTime.now();
+  }
+
+  bool _canShowPopup(String? auctionId) {
+    if (auctionId == null) return true;
+    if (_dismissedPopups.contains(auctionId)) return false;
+    final last = _lastPopupShown[auctionId];
+    if (last != null && DateTime.now().difference(last) < _popupCooldown) return false;
+    return true;
   }
 
   Future<void> _saveNotification({
@@ -275,13 +273,6 @@ class NotificationService {
 
     await _notificationsBox!.put(notification.id, notification);
   }
-
-  // Note: 5-minute OS-level reminders were intentionally removed to avoid
-  // extra dependencies and platform scheduling complexity. The app instead
-  // generates notifications when it checks auction states (on resume or
-  // after fetching data).
-
-  // helper removed: not needed in current simplified notification flow
 
   List<NotificationModel> getUserNotifications(String userId) {
     if (_notificationsBox == null) return [];
@@ -328,11 +319,18 @@ class NotificationService {
       type: 'auction_active',
       auctionId: auctionId,
     );
-
-    // If this auction was already shown as a popup during this session,
-    // avoid showing a duplicate snackbar.
-    if (context != null && !_popupShownAuctions.contains(auctionId)) {
-     
+    if (context != null && _canShowPopup(auctionId)) {
+      try {
+        // show in-app dialog for active auction if allowed by cooldown/dismissal
+        await showInAppNotification(
+          context,
+          title: 'Lelang Aktif! 🎨',
+          message: '$auctionTitle - $message',
+          auctionId: auctionId,
+        );
+      } catch (_) {
+        showSnackBar(context, '$auctionTitle - $message', icon: Icons.notifications);
+      }
     }
 
     await showLocalNotification(
@@ -341,9 +339,6 @@ class NotificationService {
       payload: payload ?? 'auction_active',
     );
   }
-
-  /// Public helper to persist a notification and optionally show a local
-  /// system notification and in-app snackbar/dialog.
   Future<void> addNotification({
     required String userId,
     required String title,
@@ -352,9 +347,6 @@ class NotificationService {
     String? auctionId,
     BuildContext? context,
     bool showLocal = true,
-    /// If true, shows the in-app dialog (popup) instead of a snackbar.
-    /// When [showPopup] is true we do NOT also show a snackbar to avoid
-    /// duplicate UI (popup + snackbar) for the same notification.
     bool showPopup = false,
   }) async {
     await _saveNotification(
@@ -365,31 +357,20 @@ class NotificationService {
       auctionId: auctionId,
     );
     if (context != null) {
-      // Show either an in-app dialog (popup) or a snackbar, but not both.
       if (showPopup) {
-        // Record that this auction (if provided) was shown as a popup so
-        // other service methods won't duplicate with a snackbar.
-        if (auctionId != null) _popupShownAuctions.add(auctionId);
-        // Fire-and-forget the dialog; callers who need to await can call
-        // showInAppNotification themselves.
-        try {
-          showInAppNotification(context, title: title, message: message, auctionId: auctionId);
-        } catch (_) {
-          // If dialog fails for any reason, fall back to snackbar so user
-          // still sees feedback.
-          showSnackBar(context, message, icon: Icons.notifications);
+        if (_canShowPopup(auctionId)) {
+          try {
+            showInAppNotification(context, title: title, message: message, auctionId: auctionId);
+          } catch (_) {
+            showSnackBar(context, message, icon: Icons.notifications);
+          }
         }
       } else {
-        // If this notification is tied to an auction that was already shown
-        // as a popup earlier in the session, skip showing a snackbar to
-        // avoid duplicate UI. Also, if a system/local notification will be
-        // shown (showLocal == true) prefer the OS notification and do not
-        // show an in-app snackbar.
-        if (auctionId != null && _popupShownAuctions.contains(auctionId)) {
-          // no-op: popup was already shown for this auction
+        // if user has explicitly dismissed popups for this auction, don't show inline snack
+        if (auctionId != null && _dismissedPopups.contains(auctionId)) {
+          // skip
         } else {
           if (!showLocal) {
-            // Lightweight in-app feedback via snackbar
             showSnackBar(context, message, icon: Icons.notifications);
           }
         }
@@ -424,11 +405,7 @@ class NotificationService {
       auctionId: auctionId,
     );
 
-    // If this auction was already shown as a popup, skip showing a snackbar
-    // to avoid duplicate UI. Additionally, if a system (local) notification
-    // will be shown (showLocal == true) prefer the OS notification and do
-    // not show an in-app snackbar.
-    if (context != null && !_popupShownAuctions.contains(auctionId)) {
+    if (context != null && _canShowPopup(auctionId)) {
       if (!showLocal) {
         showSnackBar(
           context,
@@ -464,7 +441,6 @@ class NotificationService {
       final startTime = auction.auctionDate;
       final minutesUntilStart = startTime.difference(now).inMinutes;
 
-      // Notifikasi 10 menit sebelum lelang dimulai (range 9-11 menit untuk toleransi)
       if (minutesUntilStart >= 9 && minutesUntilStart <= 11) {
         await notifyAuctionStarting(
           userId: userId,
@@ -485,9 +461,7 @@ class NotificationService {
     String? auctionId,
     bool showLocal = true,
   }) async {
-    // If this auction was already shown as a popup, or if a system/local
-    // notification will be shown, avoid showing a duplicate snackbar.
-    if (context != null && (auctionId == null || !_popupShownAuctions.contains(auctionId))) {
+    if (context != null && (auctionId == null || _canShowPopup(auctionId))) {
       if (!showLocal) {
         showSnackBar(
           context,
@@ -508,9 +482,6 @@ class NotificationService {
     }
   }
 
-  /// Check for finished auctions among user's registered auctions and
-  /// notify user about the result (win/lose). This should be called when
-  /// the app resumes or after fetching latest auction/bid data.
   Future<void> checkFinishedAuctionsForUser({
     required String userId,
     required List<InterestModel> registeredAuctions,
@@ -525,7 +496,7 @@ class NotificationService {
       if (auction == null) continue;
 
       final endTime = auction.auctionDate.add(AppAnimations.auctionDuration);
-      if (now.isBefore(endTime)) continue; // not finished yet
+      if (now.isBefore(endTime)) continue; 
 
       final key = '${userId}_${auction.id}_result';
       if (_notifiedAuctions.contains(key)) continue;
@@ -547,11 +518,6 @@ class NotificationService {
       );
 
       if (context != null) {
-        // Use system/local notification so it appears in the OS notification
-        // tray and is persisted (shown in bell icon). We still persist the
-        // record via addNotification — but prefer the OS popup over an
-        // in-app dialog for finished-auction results so users see it even
-        // when the app is backgrounded.
         await addNotification(
           userId: userId,
           title: title,
@@ -563,8 +529,6 @@ class NotificationService {
           showLocal: true,
         );
       } else {
-        // No context (app backgrounded); show a local/system notification
-        // and persist the record.
         await addNotification(
           userId: userId,
           title: title,
@@ -588,29 +552,17 @@ class NotificationService {
 
   Future<void> scheduleAuctionCheck() async {}
 
-  /// Perform a background check for finished auctions across all users.
-  /// This method is safe to call from a background isolate (headless)
-  /// as long as the environment has Flutter bindings initialized.
   static Future<void> performBackgroundCheck() async {
     try {
-      // Initialize services required in background
       WidgetsFlutterBinding.ensureInitialized();
       await Hive.initFlutter();
-      // Register adapters if not already registered in this isolate
-      // (Adapters registration is idempotent)
       Hive.registerAdapter(NotificationModelAdapter());
-
       final notif = NotificationService();
       if (!notif._isInitialized) await notif.initialize();
-
-      // Initialize local DB and auction data
       final localDb = LocalDbService();
       await localDb.initialize();
-
       final auctionService = AuctionService();
       final allAuctions = await auctionService.fetchAuctions();
-
-      // Iterate users stored locally and check results for their interests
       final usersBox = localDb.usersBox;
       final regBox = localDb.registeredAuctionsBox;
 
@@ -627,12 +579,11 @@ class NotificationService {
             context: null,
           );
         } catch (e) {
-          // non-fatal per-user error
+         
         }
       }
     } catch (e) {
-      // If background check failed, there's nothing to do here. We'll try
-      // again on the next scheduled run.
+    
     }
   }
 }

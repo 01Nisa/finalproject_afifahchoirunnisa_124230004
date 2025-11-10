@@ -39,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = false);
 
-    // Clear previous field errors
     setState(() {
       _emailError = null;
       _passwordError = null;
@@ -52,7 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       final msg = (result['message'] ?? '').toString();
 
-      // map server errors to field errors when possible
       if (msg.contains('Email belum terdaftar') ||
           msg.contains('Format email')) {
         setState(() => _emailError = msg);
@@ -105,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Email',
                     hintText: 'Masukkan email Anda',
                     prefixIcon: Icon(Icons.email_outlined),
-                    // errorText will be provided dynamically
                   ).copyWith(errorText: _emailError),
                   validator: AppValidators.email,
                   onChanged: (v) {
@@ -132,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
                     ),
-                    // show password related errors from server
                   ).copyWith(errorText: _passwordError),
                   validator: AppValidators.password,
                   onChanged: (v) {

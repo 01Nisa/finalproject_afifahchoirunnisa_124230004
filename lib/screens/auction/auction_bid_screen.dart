@@ -321,7 +321,6 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
 
   Widget _buildBidInputLabel(double currentBid, String currency) {
     final auctionMinBid = _auction?.minimumBid ?? 0.0;
-    // Hanya cek terhadap harga dasar, bukan tawaran tertinggi
     final minBid = auctionMinBid;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -450,7 +449,7 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: ElevatedButton.icon(
               onPressed: () {
-                // TODO: Implement open maps
+                
               },
               icon: const Icon(Icons.map, size: 16),
               label: const Text('Buka di Maps'),
@@ -502,7 +501,6 @@ class _AuctionBidScreenState extends State<AuctionBidScreen> {
       return;
     }
 
-    // Validasi: tawaran hanya harus lebih besar dari harga dasar, bukan dari tawaran sebelumnya
     final minimumBid = _auction!.minimumBid;
     if (bidAmount <= minimumBid) {
       _showSnackBar(

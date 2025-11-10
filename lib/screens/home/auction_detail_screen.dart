@@ -1,4 +1,3 @@
-// lib/screens/auction/auction_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -34,15 +33,12 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
   double? _lng;
   bool _isLoadingMap = true;
   String? _mapError;
-  // _currentPosition intentionally removed (not used in this screen's preview)
 
   @override
   void initState() {
     super.initState();
     _resolveLocation();
   }
-
-  // _fetchCurrentPosition removed: small preview no longer needs device location
 
   Future<void> _resolveLocation() async {
     setState(() {
@@ -289,7 +285,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // JUDUL KARYA
                       Text(
                         widget.auction.title,
                         style: AppTextStyles.h2.copyWith(
@@ -299,7 +294,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      // SENIMAN
                       if (widget.auction.artist.isNotEmpty)
                         Text(
                           'Oleh: ${widget.auction.artist}',
@@ -312,7 +306,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
 
                       const SizedBox(height: 16),
 
-                      // DETAIL KARYA: TAHUN, MEDIUM, DIMENSI — SATU KALI SAJA
                       if (widget.auction.year?.isNotEmpty == true ||
                           widget.auction.medium?.isNotEmpty == true ||
                           widget.auction.dimensions?.isNotEmpty == true)
@@ -360,7 +353,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
 
                       const SizedBox(height: 24),
 
-                      // HARGA DASAR
                       _buildInfoCard(
                         icon: Icons.local_offer,
                         title: 'Harga Dasar',
@@ -370,7 +362,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
 
                       const SizedBox(height: 16),
 
-                      // WAKTU LELANG
                       _buildInfoCard(
                         icon: Icons.access_time,
                         title: 'Waktu Lelang',
@@ -380,7 +371,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
 
                       const SizedBox(height: 16),
 
-                      // LOKASI
                       _buildInfoCard(
                         icon: Icons.location_on,
                         title: 'Lokasi',
@@ -390,7 +380,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
 
                       const SizedBox(height: 24),
 
-                      // MINI MAP
                       Text(
                         'Lokasi di Peta',
                         style: AppTextStyles.h4.copyWith(
@@ -419,7 +408,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
             ),
           ),
 
-          // BOTTOM BUTTON
           Positioned(
             bottom: 0,
             left: 0,
@@ -679,7 +667,6 @@ class _AuctionDetailScreenState extends State<AuctionDetailScreen> {
   }
 }
 
-// FULL SCREEN MAP — ANIMASI PESAWAT + JARAK AKURAT
 class FullScreenMapPage extends StatefulWidget {
   final double auctionLat;
   final double auctionLng;

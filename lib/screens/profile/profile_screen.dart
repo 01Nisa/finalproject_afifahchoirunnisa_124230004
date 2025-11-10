@@ -71,7 +71,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // FOTO PROFIL
                 Row(
                   children: [
                     GestureDetector(
@@ -157,8 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
                 const SizedBox(height: 32),
-
-                // MENU
+                
                 ListTile(
                   leading: const Icon(Icons.settings),
                   title: const Text('Pengaturan'),

@@ -43,11 +43,6 @@ void main() async {
   await BidService().initialize();
   await NotificationService().initialize();
 
-  // WorkManager-based periodic background checks were removed because the
-  // selected `workmanager` plugin produced Android/Kotlin compile errors in
-  // this project's environment. Background checks will be implemented via a
-  // different approach (FCM or a compatible background plugin) in a follow-up.
-
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

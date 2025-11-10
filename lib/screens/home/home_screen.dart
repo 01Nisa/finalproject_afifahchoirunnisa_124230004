@@ -49,8 +49,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Ensure notifications are initialized before loading auctions so
-    // finished-auction notifications can be persisted and emitted reliably.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeNotifications();
       await _loadAuctionsData();
@@ -67,18 +65,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // When app resumes, always check for finished auctions so users
-      // receive result notifications even if the data was already loaded.
       if (!_hasLoadedOnce) {
         _loadAuctionsData();
       } else {
-        // kick off checks without awaiting so we don't block the UI thread
         Future(() async {
           try {
             await _checkActiveAuctions();
             await _showInAppNotificationsIfNeeded();
           } catch (_) {
-            // swallow - we'll try again later
           }
         });
       }
@@ -123,8 +117,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (activeAuctions.isNotEmpty && mounted) {
       final firstActive = activeAuctions.first;
-      // Prefer persisting & recording the popup so the notification service
-      // can avoid showing a duplicate snackbar for the same auction.
       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         await NotificationService().addNotification(
@@ -137,7 +129,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           showPopup: true,
         );
       } else {
-        // No user available — show popup without persisting
         await NotificationService.showInAppNotification(
           context,
           title: 'Lelang Aktif!',
@@ -163,9 +154,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final registeredAuctions = _userService.getRegisteredAuctions(user.id);
   if (!mounted) return;
   final now = DateTime.now();
-
-    // Check for finished auctions first so users get immediate results
-    // (system notification + persisted record) when the app loads/resumes.
     await _notificationService.checkFinishedAuctionsForUser(
       userId: user.id,
       registeredAuctions: registeredAuctions,

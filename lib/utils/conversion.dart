@@ -2,13 +2,6 @@ import 'package:intl/intl.dart';
 import 'constants.dart';
 
 class ConversionHelper {
-  /// Convert [amount] from [fromCurrency] (defaults to app default) to [targetCurrency].
-  ///
-  /// Exchange rates are stored in [CurrencyConstants.exchangeRates] as the
-  /// number of units of that currency per 1 USD (e.g. IDR: 15750 means
-  /// 1 USD = 15750 IDR). The conversion formula is:
-  /// amount_in_usd = amount / rate[from]
-  /// amount_in_target = amount_in_usd * rate[target]
   static double convertCurrency(
     double amount,
     String targetCurrency, {
@@ -18,8 +11,6 @@ class ConversionHelper {
 
     final rateFrom = CurrencyConstants.exchangeRates[fromCurrency] ?? 1.0;
     final rateTo = CurrencyConstants.exchangeRates[targetCurrency] ?? 1.0;
-
-    // Convert from source currency to USD, then to target currency
     final amountUsd = amount / rateFrom;
     return amountUsd * rateTo;
   }
@@ -118,9 +109,6 @@ class ConversionHelper {
     }
   }
 
-  /// Convert [dateTime] which is assumed to be in the app default timezone
-  /// (see [AppConstants.defaultTimezone]) into [targetTimezone]. This computes
-  /// the UTC instant from the source offset then applies the target offset.
   static DateTime convertTimezone(
     DateTime dateTime,
     String targetTimezone,
@@ -130,9 +118,6 @@ class ConversionHelper {
     final tgt = _normalizeTimezone(targetTimezone);
     final tgtOffset = TimezoneConstants.timezoneOffsets[tgt];
     if (srcOffset == null || tgtOffset == null) return dateTime;
-
-    // Interpret the provided dateTime as local in source timezone, convert
-    // to UTC, then apply target offset.
     final utc = dateTime.subtract(Duration(hours: srcOffset));
     return utc.add(Duration(hours: tgtOffset));
   }

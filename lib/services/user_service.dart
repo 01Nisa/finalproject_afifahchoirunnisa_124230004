@@ -25,7 +25,6 @@ class UserService {
 
     try {
       _usersBox = await Hive.openBox<UserModel>(AppConstants.usersBox);
-      // Migration: ensure existing users have app defaults for currency/timezone
       try {
         for (var user in _usersBox.values.toList()) {
           var changed = false;
@@ -43,7 +42,6 @@ class UserService {
           }
         }
       } catch (e) {
-        // Non-fatal migration errors shouldn't block initialization
         print('⚠️ UserService: migration failed: $e');
       }
       _registeredAuctionsBox =
@@ -170,10 +168,6 @@ class UserService {
       );
 
       await _registeredAuctionsBox.put(interestId, newInterest);
-
-      // Persist a registration notification and show a local popup so the
-      // user sees immediate confirmation and the notification is saved
-      // in the bell icon list.
       try {
         await NotificationService().addNotification(
           userId: userId,
@@ -210,9 +204,6 @@ class UserService {
       }
 
       await _registeredAuctionsBox.delete(interestId);
-
-      // Persist a cancellation notification so the user sees confirmation
-      // and it is saved in the notifications list.
       try {
         await NotificationService().addNotification(
           userId: interest.userId,

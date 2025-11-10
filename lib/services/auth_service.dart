@@ -97,7 +97,6 @@ class AuthService {
     required String password,
   }) async {
     try {
-      // basic email format validation (reuse app validator logic)
       final emailError = AppValidators.email(email);
       if (emailError != null) {
         return {
@@ -106,7 +105,6 @@ class AuthService {
         };
       }
 
-      // find user by email
       final matches = _usersBox.values
           .where((u) => u.email.toLowerCase() == email.toLowerCase());
 
@@ -119,7 +117,6 @@ class AuthService {
 
       final user = matches.first;
 
-      // verify password
       if (!_verifyPassword(password, user.passwordHash)) {
         return {
           'success': false,

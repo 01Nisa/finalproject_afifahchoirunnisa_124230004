@@ -212,8 +212,7 @@ class _AuctionActiveScreenState extends State<AuctionActiveScreen>
         },
       );
     }
-
-    // Portrait mode - ListView (tanpa header)
+    
     return ListView(
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       children: [

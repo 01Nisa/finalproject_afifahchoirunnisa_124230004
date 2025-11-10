@@ -8,7 +8,6 @@ import '../../services/bid_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/conversion.dart';
 
-/// Screen untuk menampilkan riwayat lelang yang telah selesai
 class AuctionHistoryScreen extends StatefulWidget {
   final String userId;
 
@@ -160,7 +159,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // IMAGE + BADGE
               Stack(
                 children: [
                   ClipRRect(
@@ -220,7 +218,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
                 ],
               ),
 
-              // CONTENT
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
@@ -243,7 +240,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // USER BID
                     if (userBid != null) ...[
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -291,7 +287,7 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
                       const SizedBox(height: 12),
                     ],
 
-                    // INFO ROWS
+  
                     _buildInfoRow(
                         Icons.local_offer,
                         'Harga Dasar',
@@ -306,7 +302,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
 
                     const SizedBox(height: 16),
 
-                    // BUTTON
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -384,7 +379,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 48,
@@ -416,7 +410,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // IMAGE
                     ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       child: Opacity(
@@ -437,7 +430,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // TITLE & ARTIST
                     Text(auction.title,
                         style: AppTextStyles.h2.copyWith(
                             color: AppColors.vintageBrown.withOpacity(0.9))),
@@ -449,7 +441,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
 
                     const SizedBox(height: 24),
 
-                    // BID RESULT
                     if (userBid != null) ...[
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -520,7 +511,6 @@ class _AuctionHistoryScreenState extends State<AuctionHistoryScreen> {
                       const SizedBox(height: 20),
                     ],
 
-                    // INFO CARD
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(

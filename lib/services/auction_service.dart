@@ -6,7 +6,6 @@ import '../models/auction_model.dart';
 import '../utils/constants.dart';
 import '../utils/conversion.dart';
 
-// Public helper: extract the first 4-digit year from API objectDate strings.
 String? extractYearFromObjectDate(String? raw) {
   if (raw == null) return null;
   final m = RegExp(r"\b(\d{4})\b").firstMatch(raw);
@@ -38,9 +37,6 @@ class AuctionService {
 
   Future<List<AuctionModel>> fetchAuctions({bool forceRefresh = false}) async {
     if (!forceRefresh && _cache.isNotEmpty && _isCacheValid) {
-      // Ensure any in-memory cached auctions are migrated if they look like
-      // old USD-based small values. This covers the case where the app
-      // loaded older small values into memory earlier in the session.
       await _ensureBox();
       bool changed = false;
       for (int i = 0; i < _cache.length; i++) {
@@ -85,9 +81,6 @@ class AuctionService {
     if (!forceRefresh && _box!.isNotEmpty) {
       final cachedAuctions = _box!.values.toList();
       final migrated = <AuctionModel>[];
-      // If cached auctions were created with old small numeric values (e.g. USD-like
-      // amounts), migrate them to IDR by converting from USD->IDR when the
-      // stored minimumBid looks unreasonably small.
       for (final a in cachedAuctions) {
         if (a.minimumBid < 10000) {
           final newMin = ConversionHelper.convertCurrency(a.minimumBid, 'IDR', fromCurrency: 'USD');
@@ -194,11 +187,7 @@ class AuctionService {
     if (isExclusive != null) {
       list = list.where((a) => a.isExclusive == isExclusive);
     }
-    // Normalize category matching to be case-insensitive and support
-    // older/English category names stored in cache. Also treat 'Semua'
-    // as no-op.
     if (category != null && category != 'Semua') {
-      // Stronger canonicalization map to handle English/Indonesian variants
       String canonical(String? s) {
         if (s == null) return '';
         final x = s.trim().toLowerCase();
@@ -269,7 +258,6 @@ class AuctionService {
   final medium = (data['medium'] as String?)?.trim();
   final dimensions = (data['dimensions'] as String?)?.trim();
 
-  // Only keep a clean 4-digit year; if none found, leave null so UI hides the field.
   final yearOnly = extractYearFromObjectDate(objectDate);
 
       if (title == null || title.isEmpty) {
@@ -289,13 +277,9 @@ class AuctionService {
 
       print('Successfully fetched: $title by ${artist ?? "Unknown Artist"}');
 
-  // Generate minimum bid in IDR (app default). The user requested
-  // 'juta' (millions), not 'miliar'. Use a base in millions with
-  // some variance and jitter for variety.
-  // Base: 1,000,000 IDR (1 juta) + variance depending on id.
-  final base = 1000000.0; // 1 juta IDR
-  final variance = (objectId % 20) * 250000.0; // up to +4.75 juta
-  final jitter = (objectId % 7) * 50000.0; // small per-item jitter
+  final base = 1000000.0; 
+  final variance = (objectId % 20) * 250000.0; 
+  final jitter = (objectId % 7) * 50000.0; 
   final minBid = base + variance + jitter;
       final exclusive = objectId % 2 == 0;
       final daysAhead = 3 + (objectId % 7);
@@ -303,16 +287,12 @@ class AuctionService {
       DateTime auctionDate;
       final index = ApiConstants.artworkObjectIds.indexOf(objectId);
       if (index == 0) {
-        // Sisa 6 menit (lelang 60 menit - 6 menit = dimulai 54 menit yang lalu)
         auctionDate = DateTime.now().subtract(const Duration(minutes: 54));
       } else if (index == 1) {
-        // Sisa 20 menit (lelang 60 menit - 20 menit = dimulai 40 menit yang lalu)
         auctionDate = DateTime.now().subtract(const Duration(minutes: 40));
       } else if (index == 2) {
-        // Sisa 30 menit (lelang 60 menit - 30 menit = dimulai 30 menit yang lalu)
         auctionDate = DateTime.now().subtract(const Duration(minutes: 30));
       } else if (index == 3) {
-        // Sisa 1 jam (lelang baru dimulai)
         auctionDate = DateTime.now();
       } else {
         auctionDate = DateTime.now().add(Duration(days: daysAhead, hours: 20));
@@ -356,7 +336,6 @@ class AuctionService {
   }
 
   String _getCategory(int seed) {
-    // Return category names in Indonesian to match UI filter chips.
     const categories = [
       'Renaisans',
       'Impresionis',
