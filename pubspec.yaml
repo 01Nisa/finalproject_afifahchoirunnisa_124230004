@@ -3,7 +3,7 @@ description: ARVA - Sistem Informasi Lelang Lukisan Global
 publish_to: 'none'
 version: 1.0.0+1
 
-environment:
+environment: 
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
@@ -48,6 +48,8 @@ dependencies:
   
   # Image Picker
   image_picker: ^1.0.7
+  # Permissions
+  permission_handler: ^11.3.0
   
 
 dev_dependencies:

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../main.dart';
-import '../../services/user_service.dart';
+import '../../services/profile_service.dart';
 import '../../utils/constants.dart';
 import 'settings_screen.dart';
 import 'feedback_screen.dart';
@@ -17,32 +17,20 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _userService = UserService();
+  final _profileService = ProfileService();
   bool _isUpdating = false;
 
-  Future<void> _updateProfilePhoto() async {
+  Future<void> _pickImage(ImageSource source) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final user = auth.currentUser;
     if (user == null) return;
 
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 85,
-    );
-
+    final XFile? image = await _profileService.pickImage(source);
     if (image == null) return;
 
     setState(() => _isUpdating = true);
 
-    final imagePath = image.path;
-
-    final result = await _userService.updateProfile(
-      userId: user.id,
-      profileImageUrl: imagePath,
-    );
+    final result = await _profileService.uploadProfileImage(userId: user.id, imagePath: image.path);
 
     setState(() => _isUpdating = false);
 
@@ -60,6 +48,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _showImageSourceSheet() async {
+    final choice = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Ambil foto'),
+              onTap: () => Navigator.of(c).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Pilih dari galeri'),
+              onTap: () => Navigator.of(c).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Batal'),
+              onTap: () => Navigator.of(c).pop(),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (choice != null) {
+      await _pickImage(choice);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -74,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Row(
                   children: [
                     GestureDetector(
-                      onTap: _updateProfilePhoto,
+                      onTap: _showImageSourceSheet,
                       child: Stack(
                         children: [
                           CircleAvatar(

@@ -44,6 +44,13 @@
 	<!-- Location usage description for OpenStreetMap LBS -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>App membutuhkan akses lokasi untuk menampilkan jarak ke lokasi lukisan.</string>
+	<!-- Camera and Photo usage descriptions -->
+	<key>NSCameraUsageDescription</key>
+	<string>App membutuhkan akses kamera untuk mengganti foto profil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>App membutuhkan akses foto untuk memilih foto dari galeri.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>App membutuhkan izin untuk menyimpan foto ke galeri jika diperlukan.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

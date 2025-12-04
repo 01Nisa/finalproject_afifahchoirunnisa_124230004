@@ -29,8 +29,6 @@ class BidService {
     required double hargaTawaran,
   }) async {
     try {
-      final currentHighest = await getHighestBid(lelangId);
-      final currentPrice = (currentHighest['harga'] as num?)?.toDouble() ?? 0.0;
 
       final auction = _auctionService.getAuctionById(lelangId);
       if (auction == null) {
@@ -57,13 +55,12 @@ class BidService {
       }
 
       final minBid = auction.minimumBid;
-      final finalMinBid = currentPrice > minBid ? currentPrice : minBid;
 
-      if (hargaTawaran <= finalMinBid) {
+      if (hargaTawaran <= minBid) {
         return {
           'success': false,
           'message':
-              'Tawaran harus lebih besar dari \$${finalMinBid.toStringAsFixed(0)}',
+              'Tawaran harus lebih besar dari \$${minBid.toStringAsFixed(0)}',
         };
       }
 

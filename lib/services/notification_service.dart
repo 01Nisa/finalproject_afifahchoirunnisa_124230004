@@ -321,7 +321,6 @@ class NotificationService {
     );
     if (context != null && _canShowPopup(auctionId)) {
       try {
-        // show in-app dialog for active auction if allowed by cooldown/dismissal
         await showInAppNotification(
           context,
           title: 'Lelang Aktif! 🎨',
@@ -366,9 +365,7 @@ class NotificationService {
           }
         }
       } else {
-        // if user has explicitly dismissed popups for this auction, don't show inline snack
         if (auctionId != null && _dismissedPopups.contains(auctionId)) {
-          // skip
         } else {
           if (!showLocal) {
             showSnackBar(context, message, icon: Icons.notifications);
@@ -578,12 +575,10 @@ class NotificationService {
             allAuctions: allAuctions,
             context: null,
           );
-        } catch (e) {
-         
+        } catch (e) { 
         }
       }
     } catch (e) {
-    
     }
   }
 }
